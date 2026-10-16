@@ -179,10 +179,16 @@ def _parse_completion_logprobs(
             raise MalformedGenerateResponseError(
                 f"Engine response choice.logprobs.content[{index}] must be an object."
             )
+        # The sampled token is {"token": "token_id:7"} on older vLLM and {"token_id": 7} on newer;
+        # either key naming it is enough. `type(token_id) is int` rejects True and 1.0, which equal id 1.
         expected_token = f"token_id:{completion_ids[index]}"
-        if entry.get("token") != expected_token:
+        token_id = entry.get("token_id")
+        if entry.get("token") != expected_token and not (
+            type(token_id) is int and token_id == completion_ids[index]
+        ):
             raise MalformedGenerateResponseError(
-                f"Engine response choice.logprobs.content[{index}].token must be {expected_token!r}."
+                f"Engine response choice.logprobs.content[{index}].token must be {expected_token!r} "
+                f"or .token_id must be {completion_ids[index]}."
             )
         raw_logprob = entry.get("logprob")
         if isinstance(raw_logprob, bool) or not isinstance(raw_logprob, (int, float)):

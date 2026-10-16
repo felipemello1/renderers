@@ -327,6 +327,37 @@ def test_generate_rejects_logprob_token_id_mismatch():
         _run_generate(client)
 
 
+def test_generate_reads_integer_token_id_logprobs():
+    client = _FakeClient()
+    client.choice["logprobs"]["content"] = [
+        {"token_id": 7, "logprob": -0.1, "rank": 1, "top_logprobs": []},
+        # A wrong `token` next to the right `token_id` still names the sampled token.
+        {"token": "token_id:0", "token_id": 8, "logprob": -0.2, "top_logprobs": []},
+    ]
+
+    result = _run_generate(client)
+
+    assert result["completion_logprobs"] == [-0.1, -0.2]
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [{"token_id": 2}, {"token_id": "1"}, {"token_id": True}, {"token_id": 1.0}, {}],
+    ids=["other-id", "string", "boolean", "float", "missing"],
+)
+def test_generate_rejects_integer_token_id_mismatch(entry):
+    client = _FakeClient()
+    # `True == 1` and `1.0 == 1` in Python, so these cases need sampled id 1.
+    client.choice["token_ids"][0] = 1
+    client.choice["logprobs"]["content"][0] = entry
+
+    with pytest.raises(
+        MalformedGenerateResponseError,
+        match=r"content\[0\]\.token must be 'token_id:1'",
+    ):
+        _run_generate(client)
+
+
 def test_generate_preserves_zero_completion_logprob():
     client = _FakeClient()
     client.choice["logprobs"]["content"][0]["logprob"] = 0.0
