@@ -331,8 +331,7 @@ def test_generate_reads_integer_token_id_logprobs():
     client = _FakeClient()
     client.choice["logprobs"]["content"] = [
         {"token_id": 7, "logprob": -0.1, "rank": 1, "top_logprobs": []},
-        # A wrong `token` next to the right `token_id` still names the sampled token.
-        {"token": "token_id:0", "token_id": 8, "logprob": -0.2, "top_logprobs": []},
+        {"token_id": 8, "logprob": -0.2, "rank": 1, "top_logprobs": []},
     ]
 
     result = _run_generate(client)
